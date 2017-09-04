@@ -1,0 +1,195 @@
+---
+title: "III: Creating Comparable Variables"
+author: "Manon Grevinga, Stef van Buuren"
+date: "**Practical 3 of 6**"
+output: html_document
+---
+
+This document is based in section 7.4 of the book 'Flexible Imputation of Missing Data' by Stef van Buuren. 
+
+This practical needs the `mice` library: 
+
+```{r}
+library(mice)
+```
+
+## Item `YA`
+
+**Are you able to walk outdoors on flat ground?**
+
+0. Without any difficulty
+1. With some difficulty
+2. With much difficulty
+3. Unable to do
+
+## Item `YB`
+
+**Can you, fully independently, walk outdoors (if necessary with a cane)?**
+
+0. Yes, no difficulty
+1. Yes, with some difficulty
+2. Yes, with much difficulty
+3. No, only with help from others
+
+
+##Equating categories
+
+We have two studies, A and B. `YA` has been measured in Study A, and `YB` has been measured in Study B.
+
+Would it be a good idea just to equate the four categories?
+
+The equating assumption implicitly assumes that only combinations (0, 0), (1, 1), 
+(2, 2) and (3, 3) can occur. Is that realistic?
+
+##Imputation under independence
+
+Let `YA` be the item of Study `A`, and let `YB` be the item of Study `B`. The comparability problem is a missing data problem, where `YA` is missing for population `B` and `YB` is missing for population `A`. This formulation may help in  using multiple imputation to solve the problem.
+
+First, we create a small dataset with responses as follows:
+```{r}
+fA <- c(242, 43, 15, 0, 6)         # frequencies of population A
+fB <- c(145, 110, 29, 8)           # frequencies of population B
+YA <- rep(ordered(c(0:3, NA)), fA) # outcome item A population A
+YB <- rep(ordered(c(0:3)), fB)     # outcome item B population B
+```
+Combine both datasets with missing values for item `YB` for population `A`, and missing values for item `YA` for population `B`. The dataframe `Y` contains 604 rows and 2 columns: `YA` and `YB`.
+
+```{r}
+Y <- rbind(data.frame(YA, YB = ordered(NA)), 
+           data.frame(YB, YA = ordered(NA)))
+dim(Y)
+head(Y)
+tail(Y)
+md.pattern(Y)
+```
+There no observations that link `YA` to `YB`, and so the missing data pattern is unconnected. Moreover, there are 6 records that  contain no item data at all.
+
+The following chunk is a bit of specialty code that defines two functions. The function `micemill()` calculates Kendall's $\tau$ (rank order correlation) between the imputed versions of `YA` and `YB` at each iteration. The function `ra` is a small helper function that puts the imputed data in proper shape.  
+```{r}
+micemill <- function(n){
+  for (i in 1:n){
+    imp <<- mice.mids(imp)
+    cors <- with(imp, cor(as.numeric(YA),
+                          as.numeric(YB), method = 'kendall'))
+    tau <<- rbind(tau, ra(cors, s =T))
+  }
+}
+ra <- function(x, simplify = FALSE) {
+  if (!is.mira(x)) return(NULL)
+  ra <- x$analyses
+  if (simplify) ra <- unlist(ra)
+  return(ra)
+}
+```
+
+The following code imputes the missing data in `Y` under the (dubious) assumption that `YA` and `YB` are mutually independent.
+ 
+```{r results=FALSE}
+tau <- NULL
+imp <- mice(Y, max = 0, m = 10, print = FALSE,  seed = 32662)
+micemill(25)
+
+# define a function to plot tracelines of Kendall's tau
+plotit <- function() matplot(x = 1:nrow(tau),
+                             y = tau, ylab = expression(paste("Kendall's ", tau)),
+                             xlab = "Iteration", type = "l", lwd = 1,
+                             lty = 1:10, col = "black")
+
+```
+
+```{r}
+plotit()
+```
+
+In the plot 25 iterations are plotted: the trace start near zero, but then freely wander off over a substantial range of the correlation. The MICE algorithm does not know where to go, and wander pointlessly through the parameter space. This occurs because the data contains no information that informs the relation between `YA` and `YB`, so $\tau$ can be anything.
+
+<!-- **CHUNK CODE TOEVOEGEN!!! (Deze werkt niet)** -->
+
+<!-- From the imputed data we can now calculate theta_AB and theta_BA without a problem. Namely, theta_AB = 0.500 (SD: 0.031), which is very close to theta_BB (0.497) and far from the estimate under simple equating (0.807). Likewise, theta_BA = 0.253 (SD: 0.034), which is very close to theta_AA (0.243) and far from the estimate under simple equating (0.658). Hence, if we perform the analysis without any information that links the items, we consistently find no difference between the estimates for populations A and B. -->
+
+##Why we cannot simply equate categories
+
+Suppose that we have a third, external study `E` in which both `YA` and `YB` are
+measured.
+
+```{r echo=FALSE}
+freq.YA.YB <- as.data.frame(rbind(c(0, 0, 128), c(1, 0, 13), c(2, 0, 3), c(3, 0, 0), c("NA", 0, 1),
+                                  c(0, 1, 45), c(1, 1, 45), c(2, 1, 20), c(3, 1, 0), c("NA", 1, 0),
+                                  c(0, 2, 3), c(1, 2, 10), c(2, 2, 14), c(3, 2, 1), c("NA", 2, 1),
+                                  c(0, 3, 2), c(1, 3, 0), c(2, 3, 5), c(3, 3, 1), c("NA", 3, 0)))
+freq.YA.YB[,3] <- as.numeric(as.character(freq.YA.YB[,3]))
+names(freq.YA.YB) <- c("YA", "YB", "interaction")
+cont.YA.YB <- xtabs(interaction ~ YA + YB, data=freq.YA.YB)
+cont.YA.YB <- cbind(cont.YA.YB, c(178, 68, 42, 2, 2))
+cont.YA.YB <- rbind(cont.YA.YB, c(145, 110, 29, 8, 292))
+cont.YA.YB
+```
+
+The contingency table shows that there is a strong relation between `YA` and `YB`. However, it is far from perfect, so simply equating the four categories between `YA` and `YB` will distort their relationship. Note that the table is not symmetric, indicating that `YA` is more difficult than `YB`. 
+
+Simple equating assumes 100% concordance of the pairs. The contingency table clearly shows that this is not the case in study `E`. On surface, the four response categories of `YA` and `YB` may look similar, but the information from sample `E` suggests that the items work differently in a systematic way.
+
+
+##Imputation using a bridge study
+
+Is there be a way to incorporate the relationship between `YA` and `YB` so that they will become comparable?
+
+The answer is yes. We can redo the imputation, but now with sample `E` added to the data. In this way study `E` acts as a bridge study. 
+
+The relevant data are built-in in the `mice` under the name of `walking`. 
+```{r}
+head(walking)
+table(walking$src)
+with(walking, table(YA, YB, src, useNA = "always"))
+```
+
+The missing data pattern of the combined dataset of populations A, B and E:
+```{r}
+md.pattern(walking)
+```
+Now, for 290 subjects we have scores on both `YA` and `YB` (from bridge study `E`).
+
+Multiple imputation on the dataset `walking` can now be done as
+```{r results=FALSE}
+tau <- NULL
+imp <- mice(walking, max = 0, m = 10, seed = 92786)
+pred <- imp$pred
+pred[, c("src", "age", "sex")] <- 0
+imp <- mice(walking, max = 0, m = 10, seed = 92786, pred = pred)
+micemill(20)
+plotit()
+```
+
+After five iterations the procedure seems to convergence. Speed of convergence is dependent on the size of the bridge study (now 1/3 of the total dataset). If the relative size of the bridge study was smaller, it might have taken more iterations to reach convergence.
+
+## Does the assumption matter?
+
+We have made three different assumptions on the relation between `YA` and `YB`. Does
+the assumption matter for the conclusion we draw from the data?
+
+Assumption   |  Mean   | Mean    | Perc(0) | Perc(0)
+------------ | ------- | ------- | ------- | -------
+-            | Study A | Study B | Study A | Study B
+Equate       | 0.24    | 0.66    | 81      | 50
+Independence | 0.24    | 0.25    | 50      | 50
+Bridge       | 0.24    | 0.45    | 58      | 50
+
+We calculate two statistics of interest:
+
+1. **Mean**: mean of the distribution, lower indicates a more healthy population
+2. **Perc(0)**: percentage zeroes in the distribution, higher indicates a more healthy population
+
+From the table we see
+
+* Under **equate**: Both according to **Mean** and **Perc(0)** persons from study `A` are
+healthier than persons from study `B`, and by a considerable margin (e.g. 81 versus 50 percent in the zero category).
+* Under **independence**: Both according to **Mean** and **Perc(0)** persons from 
+studies `A` and `B` are about equally healthy.
+
+Thus, different assumption may lead to radically different conclusion. We find that 
+
+* **Equate amplifies the relation between `YA` and `YB`**
+* **Independence weakens the relation between `YA` and `YB`**
+
+Neither **equate** or **independence** is OK. The more reasonable assumption is 
+here the **bridge**.

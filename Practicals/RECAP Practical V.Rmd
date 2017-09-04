@@ -1,0 +1,132 @@
+---
+title: "V: Loss-to-Follow-Up"
+author: "Aurelie Piedvache, Manon Grevinga, Stef van Buuren"
+date: "**Practical 5 of 6**"
+output: html_document
+---
+
+We use the following libraries:
+
+```{r}
+library(mice)
+```
+
+
+First, we have to get the data. Make sure that the path is changed to the path you saved the datafile.
+```{r}
+file <- path.expand("~/Project/060.19899 RECAP/Kluis/WP5 Statistical Methods/Workshop/Aurelie INSERM/data_July2017.txt")
+mydata <- read.csv(file = file, na = "NA", stringsAsFactors=TRUE)
+str(mydata, list.len = 999)
+```
+
+Categorize alle variables except *motherage* by the following chunk of code:
+```{r}
+varfactor <- c("a4_weeks","gmi_vi_hi_parca_asq_ten2","native2","f10","follow")
+mydata[,varfactor] <- lapply(mydata[,varfactor] , factor)
+str(mydata, list.len = 999)
+
+dim(mydata) #the number of observations and the number of variables
+
+summary(mydata)
+```
+
+To create the response indicator:
+```{r}
+r <- mydata$follow == 1
+```
+
+##Method 1: Get the crude prevalence
+```{r}
+neuro <- as.numeric(mydata[r, "gmi_vi_hi_parca_asq_ten2"])-1
+
+#number of responders
+nb_responders <- length(which(mydata$follow == 1))
+#number of responders without missing values on outcome
+nb_responders_wo_miss <- length(which(neuro != "NA")) - sum(is.na(neuro))
+
+1-(nb_responders_wo_miss/nb_responders) # 14% of missing values for the outcome - a lot
+
+mean_crude <- mean(neuro,na.rm = TRUE)*100
+mean_crude
+```
+
+##Method 2: Corrected the prevalence with taking into account non-responders - no correction on missing values.
+```{r}
+## fit logistic regression model wihtout imputation
+fit0 <- glm(follow == 1 ~ native2 + f10 + motherage + a4_weeks, family = binomial(),na.action = na.exclude,data=mydata)
+
+prop0 <- predict(fit0, type = "response")
+weight0 <- 1/prop0
+
+new_data <- cbind(mydata,weight0)
+new_data <- na.omit(new_data)
+new_data <- subset(new_data,follow == 1)
+summary(new_data)
+
+mean_weighted <- (weighted.mean(x = as.numeric(new_data[,"gmi_vi_hi_parca_asq_ten2"]), w = new_data[, "weight0"])-1)*100
+mean_weighted
+```
+
+##Method 3: Corrected the prevalence without taking into account non-responders - correction on missing values
+```{r warning = FALSE}
+## To get the number of missing values in your dataset
+1-(sum(complete.cases(mydata))/dim(mydata)[1])
+
+# md.pattern(mydata)
+# fluxplot(mydata)
+
+ini <- mice(mydata, maxit = 0, m = 43, seed = 12345)
+imp <- mice.mids(ini, maxit = 10, print = FALSE)
+
+plot(imp)
+#library("lattice")
+#bwplot(imp, ~ motherage)
+
+
+long <- complete(imp, "long", include = TRUE)
+long$neuro <-  as.numeric(long$gmi_vi_hi_parca_asq_ten2) - 1
+
+long2<-aggregate(long, by = list(long$.imp), FUN = mean, na.rm = TRUE)
+
+mean_imp <- mean(subset(long2, Group.1 !="0")$neuro)*100
+mean_imp
+```
+
+##Method 4: Corrected the prevalence with taking into account non-responders - correction on missing values
+```{r}
+## fit logistic regression model
+fit <- with(imp, glm(follow == 1 ~ native2 + f10 + motherage + a4_weeks, family = binomial()))
+
+prop <- matrix(NA, nrow = length(fit$analyses[[1]]$weights),
+ncol = length(fit$analyses))
+
+for (i in 1:length(fit$analyses)) {
+prop[, i] <- predict(fit$analyses[[i]], type = "response")
+}
+propensity <- rowMeans(prop)
+
+# construct inverse weights
+weight_all <- 1/propensity
+summary(weight_all)
+hist(weight_all)
+
+# select weight for followed-up respondents
+weight <- weight_all[mydata$follow==1]
+summary(weight)
+hist(weight)
+
+# two histograms
+hist(weight_all, col = "grey")
+hist(weight, col = "blue", add = TRUE)
+
+neuro_imp <- as.numeric(imp$data[r, "gmi_vi_hi_parca_asq_ten2"]) - 1
+mean_imp_weighted <- weighted.mean(x = neuro_imp, w = weight, na.rm = TRUE)*100
+
+#print results
+cat("crude=",mean_crude," weigthed=",mean_weighted," imputed=",mean_imp," imputed and weighted=",mean_imp_weighted)
+```
+
+
+
+
+

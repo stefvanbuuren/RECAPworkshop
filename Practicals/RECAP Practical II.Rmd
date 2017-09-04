@@ -1,0 +1,86 @@
+---
+title: "II: Multiple imputation using `mice`"
+author: "Manon Grevinga, Stef van Buuren"
+date: "**Practical 2 of 6**"
+output: html_document
+---
+
+For this practical we will use data from the package `mice`:
+
+```{r setup}
+library(mice)
+```
+
+The dataset `nhanes` contains 25 observations on the following 4 variables:
+
+* *age*: Age group (1 = 20-39, 2 = 40-59, 3 = 60+)
+* *bmi*: Body mass index (kg/m^2)
+* *hyp*: Hypertensive (1 = no, 2 = yes)
+* *chl*: Total serum cholesterol (mg/dL)
+
+In `R` the dataset looks as follows:
+
+```{r}
+nhanes
+```
+
+## Complete-case analysis
+
+When we would model without taking the missing values into account, we will get the following model:
+```{r}
+model <- lm(chl ~ bmi + age, data = nhanes)
+summary(model)
+```
+
+Note that almost half of the cases were not used in the analysis.
+
+## Missing data
+
+With multiple imputation we want to provide plausible values for the missing values, while taking the uncertainty about these numbers into account. Hence, we will first inspect the missing data pattern:
+```{r}
+md.pattern(nhanes)
+```
+Thus, for 13 subjects we have all variables. Moreover, for none of the subjects the variable age is missing. On the other hand, for 7 subjects we only have the age.
+
+One useful feature of the `mice` package is the ability to specify which predictors can be used for each incomplete variable.
+```{r}
+imp <- mice(nhanes, print = FALSE)
+imp$predictorMatrix
+```
+The rows identify which predictors can be used for the variable in the row name. Hence, to impute the variable `bmi` we can use the variables `age`, `hyp`, and `chl`. Note, that the diagonal is equal to zero, because a variable cannot predict itself. Moreover, there were no missing values for `age`, hence we do not need to predict its missing values and its row contains only zeroes.
+
+
+##Multiply impute the data
+Now, we can multiply impute the missing values in our dataset. It is useful to plot the parameters against the number of iterations to check for convergence. On convergence, the different streams should be freely intermingled with one another, without showing any definite trends. 
+```{r}
+imp <- mice(nhanes, print = FALSE, maxit = 10, seed = 24415) #10 iterations
+plot(imp) #inspect the trace lines for convergence
+```
+
+##Analysis of imputed data
+It is important to note that taking the average of the imputed datasets and analyze the averaged data is **not** the way to proceed. Doing this will yield incorrect standard errors, confidence intervals and p-values because it ignores the between-imputation variability. In other words, it does not take the uncertainty about the imputed variables into account.
+
+The appropriate way to analyze multiply imputed data is to perform complete data analysis on each imputed dataset seperately. In the `mice` package we can use the `with()` command for this purpose. For example, we fit a regression model to each dataset and print out the estimate from the first and second completed datasets by:
+
+```{r}
+fit <- with(imp, lm(chl ~ bmi + age))
+coef(fit$analyses[[1]])
+coef(fit$analyses[[2]])
+```
+
+Note, that the estimates for bmi and age are different from each other in the two completed datasets. This is due to the uncertainty created by the missing data. We can now apply the standard pooling rules by doing the following. In this way we get the final coefficient estimates for the model using imputed data:
+```{r}
+est <- pool(fit)
+summary(est)
+```
+
+## Comparison to complete-case analysis
+
+The estimated model ignoring the missing values (complete-case analysis) was given by:
+```{r}
+summary(model)
+```
+
+When we compare this multiply imputed model model with complete-case analysis, we see that the coefficient estimates are quite different. The estimates for `bmi` and `age` are significant in both models. The standard errors of the coefficient estimates of complete-analysis are smaller here than the standard errors of the model were the missing values were imputed. This is not always the case. Because the multiply imputed model is based on 25 observations rather than 13, it could also have been the other way around.
+
+In this case we assumed that the parameter estimates are normally distributed around the population value. Many types of estimates are approximately normally distributed: e.g., means, standard deviations, regression coefficients, proportions and linear predictors. 

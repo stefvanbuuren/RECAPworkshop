@@ -1,0 +1,64 @@
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+[RECAP workshop: Statistical Methods for combined data sets](https://stefvanbuuren.github.io/RECAPworkshop/)
+============================================================================================================
+
+Overview
+--------
+
+This site contains materials for the RECAP workshop *Statistical Methods for combined data sets: Theory, techniques and tools* on September 4-5, 2017 in Leiden.
+
+Motivation
+----------
+
+Combining data sets generated blocks of missing data problem. However, most data analysis procedures are designed for complete data, and many will fail if the data contain missing values. Most procedures will therefore simply ignore any incomplete rows in the data, or use ad-hoc procedures like replacing missing values with some sort of "best value". However, such fixes are based on assumptions, and may introduce biases when these assumptions are not met.
+
+This workshop revises practical issues with combining data, and explores the use of multiple imputation and the Rasch model are principled solutions. The workshop is set up as a combination lectures and practical exercises to apply the techniques in practice using `R`.
+
+Contents
+--------
+
+The workshop will consist of 6 sessions, each of which comprises a lecture followed by a computer practical using `R`:
+
+1.  Session I: Combining Datasets & Missing Data
+2.  Session II: Multiple imputation using `mice`
+3.  Session III: Creating Comparable Variables
+4.  Session IV: Developmental milestones
+5.  Session V: Loss-to-Follow-Up
+6.  Session VI: Multilevel Analysis
+
+How to prepare
+--------------
+
+Please remember to bring your own laptop computer and make sure that you have write-access to that machine (some corporate computers do not allow write access) or that you have the following software and packages pre-installed.
+
+------------------------------------------------------------------------
+
+1.  Download and install the latest version of `R` from [the R-Project website](https://cloud.r-project.org)
+2.  Download and install the most recent version of `RStudio Desktop (Free License)` from [RStudio's website](https://www.rstudio.com/products/rstudio/download3/). This is not necessary, per se, but it is highly recommended as `RStudio` delivers a tremendous improvement to the user experience of base `R`.
+3.  Install the packages `mice`, `lme4`, `dplyr`, `plyr` and `mlmRev`.
+
+-   You can install packages from within `RStudio` by navigating to `Tools > Install Packages` in the upper menu and entering the names of the package into the `Packages` field. Make sure that the button `Install dependencies` is selected. Once done, click `Install` and you're all set.
+-   Or, from within `R` or `RStudio`, copy, paste and enter the following code in the console window (by default the top-right window in `RStudio` / the only window in `R`):
+
+``` r
+install.packages(c("mice", "lme4", "dplyr", "plyr", "mlmRev"))
+```
+
+------------------------------------------------------------------------
+
+Workshop materials
+------------------
+
+1.  [Lectures](Lectures/RECAPworkshopslides.pptx)
+2.  [Practical I](Practicals/RECAP_Practical_I.html)
+3.  [Practical II](Practicals/RECAP_Practical_II.html)
+4.  [Practical III](Practicals/RECAP_Practical_III.html)
+5.  [Practical IV](Practicals/RECAP_Practical_IV.html)
+6.  [Practical V](Practicals/RECAP_Practical_V.html)
+7.  [Practical VI](Practicals/RECAP_Practical_VI.html)
+8.  [Practical I .Rmd](Practicals/RECAP_Practical_I.Rmd)
+9.  [Practical II .Rmd](Practicals/RECAP_Practical_II.Rmd)
+10. [Practical III .Rmd](Practicals/RECAP_Practical_III.Rmd)
+11. [Practical IV .Rmd](Practicals/RECAP_Practical_IV.Rmd)
+12. [Practical V .Rmd](Practicals/RECAP_Practical_V.Rmd)
+13. [Practical VI .Rmd](Practicals/RECAP_Practical_VI.Rmd)

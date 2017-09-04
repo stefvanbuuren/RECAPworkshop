@@ -1,0 +1,152 @@
+---
+title: "VI: Multilevel Analysis"
+author: "Manon Grevinga, Stef van Buuren"
+date: "**Practical 6 of 6**"
+output: html_document
+---
+
+For this example, we use a dataset from the package `mlmRev`. 
+
+
+```{r setup, echo = TRUE}
+library(mlmRev)
+```
+
+The dataset is called `Exam`, and contains simulated data about examresults of children. However, since it is simulated data with an multilevel structure, we can rename the variables to something more related to RECAP. Which is what we will do, to show how such a multilevel structure works. In this case we assume that each cohort study collected the same variables (in the same units), there are no missings and the cohort studies started at the same time. Note, that this situation will practically never happen. However, to keep things simple in order to explain the multilevel analysis we will assume it holds.
+
+In this example we want to explain birthweight by gestational age, gender and a cohort specific variable **WHICH VAR??** to keep things simple. Moreover, for each child we know to which cohort study it belongs.
+
+To get the data from the package `mlmRev` run the following code chunk
+```{r}
+data(Exam) #get the data
+child.data <- Exam[, c(1, 2, 4, 7, 8, 10)] #keep only a few variables
+names(child.data) <- c("cohort", "birthweightnorm", "cohortvar", "gestational.agenorm", "gender", "child") #rename the variables
+head(child.data)
+```
+
+The simulated variables in this example where more or less standard normally distributed. This makes it easy to change the variables to gram (for birthweight) and weeks (for gestational age). We assume that the average birthweight is equal to 1325 gram with a standard deviation of 75. The average gestational age is 30 weeks with a standard deviation equal to 0.65. When running the following chunk of code the standard normally distributed variables are changed to variables in grams and weeks.
+```{r}
+#change the standardized birthweight to birthweight in gram
+child.data$birthweight <- (child.data$birthweightnorm)*75+1325
+
+#Change the standardized gestational age to gestational age in weeks in two decimals
+child.data$gestational.age <- (child.data$gestational.agenorm)*0.65+30
+child.data$gestational.age <- round(child.data$gestational.age, digits=2)
+
+#keep only the relevant variables
+child.data <- child.data[, c(1, 3, 5, 6, 7, 8)]
+
+#Give each child it own specific childnumber (instead of per cohort study)
+child.data$childnr <- seq.int(nrow(child.data))
+````
+
+The example contains 65 schools (we renamed them to cohort studies). To make this example more relatable to RECAP we will combine some similar schools/cohort studies by running the following chunk of code. We end up with cohorts A till T (20 cohort studies).
+```{r}
+child.data$cohort <- as.numeric(child.data$cohort)
+child.data[child.data$cohort %in%  c('1', '20', '11', '52'), 1] <- 'A'
+child.data[child.data$cohort %in% c('2', '3', '55'), 1] <- 'B'
+child.data[child.data$cohort %in% c('4', '29', '33', '49'), 1] <- 'C'
+child.data[child.data$cohort %in% c('5', '7', '21'), 1] <- 'D'
+child.data[child.data$cohort %in% c('6', '53', '63'), 1] <- 'E'
+child.data[child.data$cohort %in% c('8', '15', '47', '48'), 1] <- 'F'
+child.data[child.data$cohort %in% c('9', '26', '44', '54'), 1] <- 'G'
+child.data[child.data$cohort %in% c('10', '16', '31', '40'), 1] <- 'H'
+child.data[child.data$cohort %in% c('12', '61', '56'), 1] <- 'I'
+child.data[child.data$cohort %in% c('13', '17', '36', '45'), 1] <- 'J'
+child.data[child.data$cohort %in% c('14', '24', '62'), 1] <- 'K'
+child.data[child.data$cohort %in% c('18', '42', '57'), 1] <- 'L'
+child.data[child.data$cohort %in% c('19', '43', '60'), 1] <- 'M'
+child.data[child.data$cohort %in% c('22', '46'), 1] <- 'N'
+child.data[child.data$cohort %in% c('23', '25', '37'), 1] <- 'O'
+child.data[child.data$cohort %in% c('27', '32', '34'), 1] <- 'P'
+child.data[child.data$cohort %in% c('28', '59'), 1] <- 'Q'
+child.data[child.data$cohort %in% c('30', '58', '64'), 1] <- 'R'
+child.data[child.data$cohort %in% c('35', '39', '41'), 1] <- 'S'
+child.data[child.data$cohort %in% c('38', '50', '51', '65'), 1] <- 'T'
+
+#Sort the data by cohort
+child.data$cohort <- sort(child.data$cohort, decreasing=FALSE)
+```
+
+Since we combined different cohort studies, we should redefine the cohort specific variable **WHAT VAR??** which should have the same value for each child in the same cohort. For the new (combined) cohorts we will take the average value of the cohort specific variable of the cohorts that were combined.
+```{r}
+#Make one cohort variable
+child.data[child.data$cohort == 'A', 2] <- mean(child.data[child.data$cohort == 'A', 2])
+child.data[child.data$cohort == 'B', 2] <- mean(child.data[child.data$cohort == 'B', 2])
+child.data[child.data$cohort == 'C', 2] <- mean(child.data[child.data$cohort == 'C', 2])
+child.data[child.data$cohort == 'D', 2] <- mean(child.data[child.data$cohort == 'D', 2])
+child.data[child.data$cohort == 'E', 2] <- mean(child.data[child.data$cohort == 'E', 2])
+child.data[child.data$cohort == 'F', 2] <- mean(child.data[child.data$cohort == 'F', 2])
+child.data[child.data$cohort == 'G', 2] <- mean(child.data[child.data$cohort == 'G', 2])
+child.data[child.data$cohort == 'H', 2] <- mean(child.data[child.data$cohort == 'H', 2])
+child.data[child.data$cohort == 'I', 2] <- mean(child.data[child.data$cohort == 'I', 2])
+child.data[child.data$cohort == 'J', 2] <- mean(child.data[child.data$cohort == 'J', 2])
+child.data[child.data$cohort == 'K', 2] <- mean(child.data[child.data$cohort == 'K', 2])
+child.data[child.data$cohort == 'L', 2] <- mean(child.data[child.data$cohort == 'L', 2])
+child.data[child.data$cohort == 'M', 2] <- mean(child.data[child.data$cohort == 'M', 2])
+child.data[child.data$cohort == 'N', 2] <- mean(child.data[child.data$cohort == 'N', 2])
+child.data[child.data$cohort == 'O', 2] <- mean(child.data[child.data$cohort == 'O', 2])
+child.data[child.data$cohort == 'P', 2] <- mean(child.data[child.data$cohort == 'P', 2])
+child.data[child.data$cohort == 'Q', 2] <- mean(child.data[child.data$cohort == 'Q', 2])
+child.data[child.data$cohort == 'R', 2] <- mean(child.data[child.data$cohort == 'R', 2])
+child.data[child.data$cohort == 'S', 2] <- mean(child.data[child.data$cohort == 'S', 2])
+child.data[child.data$cohort == 'T', 2] <- mean(child.data[child.data$cohort == 'T', 2])
+```
+
+Now, the data is ready to be used for multilevel modelling. Note that the multilevel structure is as follows: level 1 contains the childeren and level 2 contains the cohort studies.
+
+We can plot the birthweight (the outcome we want to explain) for each cohort studie included in the study by running the following chunk of code:
+```{r}
+plot(as.factor(child.data$cohort), child.data$birthweight,
+xlab="cohort study", ylab="birthweight", main= "Boxplot of the birthweights")
+```
+
+From this plot, we can see that there is variation in birthweight between the different cohort studies: the median birthweight differs per cohort study. Moreover, the variability of birthweight within each cohort studies might also differ: the size of the white boxes (the first quantile - third quantile) differ per cohort study.
+
+
+First, we will start with a linear regression model that does not take the multilevel structure into account.
+```{r}
+#Normal linear regression model without cohort specific variable
+LS.model <- lm(birthweight ~ gestational.age + gender, data = child.data)
+summary(LS.model)
+
+#Normal linear regression model with cohort specific variable
+LS.model1 <- lm(birthweight ~ gestational.age + gender + cohortvar, data = child.data)
+summary(LS.model1)
+```
+
+In both models all variables are statistically significant. Besides ignoring the multilevel structure, one commonly used method is to add a dummy variable for each cohort study. This means including 20 dummy variables.
+```{r}
+#Normal linear regression model without cohort specific variable
+LS.model2 <- lm(birthweight ~ gestational.age + gender + factor(cohort), data = child.data)
+summary(LS.model2)
+
+#Normal linear regression model with cohort specific variable
+LS.model3 <- lm(birthweight ~ gestational.age + gender + cohortvar + factor(cohort), data = child.data)
+summary(LS.model3)
+```
+
+When adding dummy variables for each cohort (without the cohort specific variable), we can see that almost all dummy variables are statistically significant. However, when the cohort specific variable is added to the model, we can see that a lot of dummy variables are not statistically significant anymore. This is because the cohort specific variable already explains some of the variability between the cohort studies. Moreover, for one of the dummy variables the estimate is non-available (NA). This is due because the variable is linearly related to another one.
+
+When using the model structure where the cohort studies are represented by dummy variables, one assumes that the observations are still independent of each other. However, children from one cohort study might be more similar than to a randomly choosing other child from one of the other cohort studies. Or to put it more simple, a child from two parents is probably more similar to another child from the same parents (brother or sister) then a randomly chosen other child. Thus, adding dummy variables for each cohort study does not take this correlation into account. This could potentially lead to wrongly calculated standard errors (too low) leading to overstatement of the statistical significance.
+
+One way to take this correlation structure into account is by means of a mixed effects model. We will in this workshop only look at the random intercepts model, since the workshop tries to explain why some methods might be needed for RECAP and not go into full detail of these methods. With the random intercepts model each cohort study has its own intercept consisting of a fixed part (which is similar for each cohort study) and a random part. This random part is different for each cohort study, however will on average be equal to zero. Running the following chunk of code will estimate a random intercepts model:
+```{r}
+randint.model <- lmer(birthweight ~ gestational.age + gender + cohortvar + (1|cohort), data=child.data)
+summary(randint.model)
+```
+Note, that all the coefficient estimates are significant (|t-value| > 2). Moreover, the coefficient estimate for the cohort specific variable is now much smaller than in the model with dummy variables for each cohort study (140.5824). Thus, in the model with a random intercept the variation between the cohort studies is explained by the random intercepts instead of this variable.
+
+To get the random parts of the intercept for each of the cohort studies we can run the following chunk of code:
+```{r}
+ranef(randint.model)
+```
+
+We can also calculate the ICC. Remember the rule of thumb: if the ICC > 5% it is advised to use a mixed effects model.
+```{r}
+varcor <- as.data.frame(VarCorr(randint.model))
+ICC <- varcor[1,4]/(varcor[1,4] + varcor[2,4])
+ICC
+```
+Hence, for this study it was a good choice to use a mixed effects model.
+

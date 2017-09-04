@@ -1,0 +1,169 @@
+---
+title: "I: Combining Datasets & Missing Data"
+author: "Manon Grevinga, Stef van Buuren"
+date: "**Practical 1 of 6**"
+output: html_document
+---
+
+This is an R Markdown document. When you click the **Knit** button an HTML document will be generated that includes both content as well as the output of any embedded R code chunks within the document. 
+Moreover, clicking on the green triangles in the right upper corner of code chunks will run small parts of the code. This will be most convenient when we go through all the practicals step by step. Moreover, it is possible to following everything we do by means of the HTML document. 
+
+First, we need to install packages that we need during the workshop.
+
+```{r, echo = TRUE, eval=FALSE}
+install.packages(c("mice", "lme4", "dplyr", "plyr", "mlmRev"))
+```
+
+In practical I, we are using only the **plyr** package.
+
+```{r setup, echo = TRUE}
+library(plyr)
+```
+
+# Combining Datasets & Missing Data
+
+Lets assume we have two datsets, which we want to combine. This can be done in two ways: **join** and **add**. When we want to **join** two datasets they need to have some similar subjects (the variables may differ). When we want to **add** two datasets they need to contain similar variables, but may contain different subjects.
+
+## Join two datasets
+First, we will generate two datasets A and B, which have some similar subjects and different variables:
+```{r}
+#the randomly generated numbers will be same each time we use this set.seed
+set.seed(40917) 
+df <- data.frame(subject = seq(1, 15, 1), 
+                 mean = seq(10, 24, 1), 
+                 sd = seq(2, 2.14, 0.01))
+
+datasetA <- cbind(seq(1, 15,1), 
+                  data.frame(matrix(rnorm(15*3), 15, 3) * df$sd + df$mean))
+datasetA[, 2:4] <- round(datasetA[, 2:4], 2)
+names(datasetA) <- c("subjectID", "X1", "X2", "X3")
+
+df <- data.frame(subject = seq(1, 15, 1), 
+                 mean = seq(110, 124, 1), 
+                 sd = seq(2, 2.14, 0.01))
+datasetB <- cbind(seq(8, 22,1), 
+                  data.frame(matrix(rnorm(15*3), 15, 3) * df$sd + df$mean))
+datasetB[, 2:4] <- round(datasetB[, 2:4], 2)
+names(datasetB) <- c("subjectID", "X4", "X5", "X6")
+```
+
+This leads to the following summary statistics, where datasetA contains subjects 1 to 15, and datasetB contains subjects 8 to 22:
+```{r}
+datasetA #subjectIDs from 1 to 15
+datasetB #subjectIDs from 8 tot 22.
+```
+
+###Inner Join
+With **Inner join** only keep the *subjects that exists in both datasets*:
+```{r}
+AB.innerjoin <- join(datasetA, datasetB, by = "subjectID", type = "inner")
+AB.innerjoin #keep subjects 8 to 15
+``` 
+Note, we have 8 observations (for subjectID 8 untill 15) and that for each subject we have an observation for each variabele.
+
+###Full Outer Join
+With **Full outer join** keep *all subjects*:
+```{r}
+AB.fullouterjoin <- join(datasetA, datasetB, by = "subjectID", type = "full")
+AB.fullouterjoin #keep all subjects 
+``` 
+Note, we have 22 observations and there are some non-availables (NA's) for each variabele. We have NA's for X1 till X3 for subjectID 16 till 22 and NA's for X4 till X6 for subjectID 1 till 7.
+
+###Master Join
+With **Master join (left outer join)** keep *all subjects of one dataset and only the matching rows of the other*:
+```{r}
+AB.leftjoin <- join(datasetA, datasetB, by = "subjectID", type = "left")
+AB.leftjoin #keep all subjects from datasets A and match rows from B
+``` 
+Note, that we have 15 observations and NA's for X4 till X6 for subjectIDs 1 till 7. 
+
+###Detail Join
+With **Detail join (right outer join)** keep *all subjects of one dataset and only the matching rows of the other*:
+```{r}
+AB.rightjoin <- join(datasetA, datasetB, by = "subjectID", type = "right")
+AB.rightjoin #keep all subjects from datasets A and match rows from B
+``` 
+Note, that we have 15 observations and NA's for X1 till X3 for subjectIDs 16 till 22.
+
+##Add two datasets
+Besides joining datasets, we can also **add** datasets. In this case we measured the same variables (not all have to be the same) on different subjects. First we will simulate two datasets C and D, with some variables similar and different subjects.
+```{r}
+df <- data.frame(subject = seq(1, 15, 1), 
+                 mean = seq(10, 24, 1), 
+                 sd = seq(2, 2.14, 0.01))
+datasetC <- cbind(seq(1, 15,1), 
+                  data.frame(matrix(rnorm(15*3), 15, 3) * df$sd + df$mean))
+datasetC[, 2:4] <- round(datasetC[, 2:4], 2)
+names(datasetC) <- c("subjectID", "X1", "X2", "X3")
+
+df <- data.frame(subject = seq(1, 15, 1), 
+                 mean = seq(10, 24, 1), 
+                 sd = seq(2, 2.14, 0.01))
+datasetD <- cbind(seq(16, 30,1), 
+                  data.frame(matrix(rnorm(15*3), 15, 3) * df$sd + df$mean))
+datasetD[, 2:4] <- round(datasetD[, 2:4], 2)
+names(datasetD) <- c("subjectID", "X4", "X2", "X3")
+```
+
+This leads to the following summary statistics, where datasetA contains subjectsIDs from 1 to 15 with variables X1, X2, and X3 and datasetB contains subjectIDs from 16 tot 30 with variables X4, X2, and X3:
+```{r}
+datasetC
+datasetD
+```
+
+When adding two dataframes that do not have all the same variables there are two options:
+1. Drop the variables that are not similar
+2. Keep the variables that are not similar and put them equal to NA for the other dataset.
+
+###Drop variables
+This look as follows when we drop the variables that are not similar (in this case X1 in dataset C and X4 in dataset D):
+```{r}
+datasetC.dropX1 <- subset(datasetC, select = c("subjectID", "X2", "X3"))
+datasetD.dropX4 <- subset(datasetD, select = c("subjectID", "X2", "X3"))
+```
+
+```{r}
+datasetC.dropX1
+datasetD.dropX4
+```
+Now that we dropped variables X1 and X4 we are left with two datasets that contain the same variables. Hence, we can add them.
+```{r}
+add.CD.drop <- rbind(datasetC.dropX1, datasetD.dropX4)
+add.CD.drop #subjectID are from 1 to 30.
+```
+
+###Keep Variables
+However, normally we want to avoid dropping variables since they contain information. Hence, another way to add two datasets is to keep the variables that are not similar and make them NA for the other dataset:
+```{r}
+datasetC.addX4 <- cbind(datasetC, rep("NA", 15))
+names(datasetC.addX4) <- c("subjectID", "X1", "X2", "X3", "X4")
+
+datasetD.addX1 <- as.data.frame(cbind(datasetD$subjectID, rep("NA", 15), 
+                                      datasetD$X2, datasetD$X3, datasetD$X4))
+names(datasetD.addX1) <- c("subjectID", "X1", "X2", "X3", "X4")
+```
+
+Now the datasets look as follows:
+```{r}
+datasetC.addX4
+datasetD.addX1
+```
+
+Now, we can add the two datasets:
+```{r}
+add.CD.keep <- rbind(datasetC.addX4, datasetD.addX1)
+add.CD.keep
+```
+
+So to conclude, we can **join** and **add** datasets. If we have observations from similar subjects on different variabiles we can join the datasets in four ways:
+
+* Inner join
+* Outer join
+* Master join
+* Detail join
+
+When two datasets measures some similar variables on different subjects we can add theses datasets. To do this we have to decide on how to handle variables that were not included in both datasets:
+
+* Drop these variables
+* Keep these variables
+
