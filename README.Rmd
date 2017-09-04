@@ -47,13 +47,13 @@ Please remember to bring your own laptop computer and make sure that you have wr
 
 1. Download and install the latest version of `R` from [the R-Project website](https://cloud.r-project.org)
 2. Download and install the most recent version of `RStudio Desktop (Free License)` from [RStudio's website](https://www.rstudio.com/products/rstudio/download3/). This is not necessary, per se, but it is highly recommended as `RStudio` delivers a tremendous improvement to the user experience of base `R`.
-3. Install the packages `mice`, `lme4`, `dplyr`, `plyr` and 
+3. Install the packages `markdown`, `mice`, `lme4`, `dplyr`, `plyr` and 
 `mlmRev`.   
 - You can install packages from within `RStudio` by navigating to `Tools > Install Packages` in the upper menu and entering the names of the package into the `Packages` field. Make sure that the button `Install dependencies` is selected. Once done, click `Install` and you're all set.
   - Or, from within `R` or `RStudio`, copy, paste and enter the following code in the console window (by default the top-right window in `RStudio` / the only window in `R`):
   
 ```{r eval=FALSE}
-install.packages(c("mice", "lme4", "dplyr", "plyr", "mlmRev"))
+install.packages(c("markdown", "mice", "lme4", "dplyr", "plyr", "mlmRev"))
 ```
 
 ---
