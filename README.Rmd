@@ -60,7 +60,7 @@ install.packages(c("mice", "lme4", "dplyr", "plyr", "mlmRev"))
 
 ## Workshop materials
 
-1. [Lectures](Lectures/RECAPworkshopslides.pptx)
+1. [Lectures](Lectures/RECAP_Workshop_WP5_20170904.pptx)
 2. [Practical I](Practicals/RECAP_Practical_I.html)
 3. [Practical II](Practicals/RECAP_Practical_II.html)
 4. [Practical III](Practicals/RECAP_Practical_III.html)
@@ -72,6 +72,7 @@ install.packages(c("mice", "lme4", "dplyr", "plyr", "mlmRev"))
 10. [Practical III .Rmd](Practicals/RECAP_Practical_III.Rmd)
 11. [Practical IV .Rmd](Practicals/RECAP_Practical_IV.Rmd)
 12. [Practical V .Rmd](Practicals/RECAP_Practical_V.Rmd)
-13. [Practical VI .Rmd](Practicals/RECAP_Practical_VI.Rmd)
-14. [Unifying perspective](Background/RECAP_D5_1_Unifying_missing_data_perspective_final.pdf)
+13. [Practical V data_July2017.txt](Practicals/data_July2017.txt)
+14. [Practical VI .Rmd](Practicals/RECAP_Practical_VI.Rmd)
+15. [Unifying perspective](Background/RECAP_D5_1_Unifying_missing_data_perspective_final.pdf)
 
