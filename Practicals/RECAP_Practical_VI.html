@@ -128,19 +128,19 @@ $(document).ready(function () {
 <pre><code>## Loading required package: lme4</code></pre>
 <pre><code>## Loading required package: Matrix</code></pre>
 <p>The dataset is called <code>Exam</code>, and contains simulated data about examresults of children. However, since it is simulated data with an multilevel structure, we can rename the variables to something more related to RECAP. Which is what we will do, to show how such a multilevel structure works. In this case we assume that each cohort study collected the same variables (in the same units), there are no missings and the cohort studies started at the same time. Note, that this situation will practically never happen. However, to keep things simple in order to explain the multilevel analysis we will assume it holds.</p>
-<p>In this example we want to explain birthweight by gestational age, gender and a cohort specific variable <strong>WHICH VAR??</strong> to keep things simple. Moreover, for each child we know to which cohort study it belongs.</p>
+<p>In this example we want to explain birthweight by gestational age, gender and a cohort specific variable homebirth (the number of home births per 100 childbirths) to keep things simple. Moreover, for each child we know to which cohort study it belongs.</p>
 <p>To get the data from the package <code>mlmRev</code> run the following code chunk</p>
 <pre class="r"><code>data(Exam) #get the data
 child.data &lt;- Exam[, c(1, 2, 4, 7, 8, 10)] #keep only a few variables
-names(child.data) &lt;- c(&quot;cohort&quot;, &quot;birthweightnorm&quot;, &quot;cohortvar&quot;, &quot;gestational.agenorm&quot;, &quot;gender&quot;, &quot;child&quot;) #rename the variables
+names(child.data) &lt;- c(&quot;cohort&quot;, &quot;birthweightnorm&quot;, &quot;homebirth&quot;, &quot;gestational.agenorm&quot;, &quot;gender&quot;, &quot;child&quot;) #rename the variables
 head(child.data)</code></pre>
-<pre><code>##   cohort birthweightnorm cohortvar gestational.agenorm gender child
-## 1      1       0.2613242 0.1661752           0.6190592      F   143
-## 2      1       0.1340672 0.1661752           0.2058022      F   145
-## 3      1      -1.7238820 0.1661752          -1.3645760      M   142
-## 4      1       0.9675862 0.1661752           0.2058022      F   141
-## 5      1       0.5443412 0.1661752           0.3711052      F   138
-## 6      1       1.7348992 0.1661752           2.1894372      M   155</code></pre>
+<pre><code>##   cohort birthweightnorm homebirth gestational.agenorm gender child
+## 1      1           0.261     0.166               0.619      F   143
+## 2      1           0.134     0.166               0.206      F   145
+## 3      1          -1.724     0.166              -1.365      M   142
+## 4      1           0.968     0.166               0.206      F   141
+## 5      1           0.544     0.166               0.371      F   138
+## 6      1           1.735     0.166               2.189      M   155</code></pre>
 <p>The simulated variables in this example where more or less standard normally distributed. This makes it easy to change the variables to gram (for birthweight) and weeks (for gestational age). We assume that the average birthweight is equal to 1325 gram with a standard deviation of 75. The average gestational age is 30 weeks with a standard deviation equal to 0.65. When running the following chunk of code the standard normally distributed variables are changed to variables in grams and weeks.</p>
 <pre class="r"><code>#change the standardized birthweight to birthweight in gram
 child.data$birthweight &lt;- (child.data$birthweightnorm)*75+1325
@@ -179,7 +179,7 @@ child.data[child.data$cohort %in% c('38', '50', '51', '65'), 1] &lt;- 'T'
 
 #Sort the data by cohort
 child.data$cohort &lt;- sort(child.data$cohort, decreasing=FALSE)</code></pre>
-<p>Since we combined different cohort studies, we should redefine the cohort specific variable <strong>WHAT VAR??</strong> which should have the same value for each child in the same cohort. For the new (combined) cohorts we will take the average value of the cohort specific variable of the cohorts that were combined.</p>
+<p>Since we combined different cohort studies, we should redefine the cohort specific variable homebirth which should have the same value for each child in the same cohort. For the new (combined) cohorts we will take the average value of the cohort specific variable of the cohorts that were combined.</p>
 <pre class="r"><code>#Make one cohort variable
 child.data[child.data$cohort == 'A', 2] &lt;- mean(child.data[child.data$cohort == 'A', 2])
 child.data[child.data$cohort == 'B', 2] &lt;- mean(child.data[child.data$cohort == 'B', 2])
@@ -200,7 +200,10 @@ child.data[child.data$cohort == 'P', 2] &lt;- mean(child.data[child.data$cohort 
 child.data[child.data$cohort == 'Q', 2] &lt;- mean(child.data[child.data$cohort == 'Q', 2])
 child.data[child.data$cohort == 'R', 2] &lt;- mean(child.data[child.data$cohort == 'R', 2])
 child.data[child.data$cohort == 'S', 2] &lt;- mean(child.data[child.data$cohort == 'S', 2])
-child.data[child.data$cohort == 'T', 2] &lt;- mean(child.data[child.data$cohort == 'T', 2])</code></pre>
+child.data[child.data$cohort == 'T', 2] &lt;- mean(child.data[child.data$cohort == 'T', 2])
+
+child.data$homebirth &lt;- ((child.data$homebirth+0.8)/2)*100
+child.data$homebirth &lt;- round(child.data$homebirth, digits=0)</code></pre>
 <p>Now, the data is ready to be used for multilevel modelling. Note that the multilevel structure is as follows: level 1 contains the childeren and level 2 contains the cohort studies.</p>
 <p>We can plot the birthweight (the outcome we want to explain) for each cohort studie included in the study by running the following chunk of code:</p>
 <pre class="r"><code>plot(as.factor(child.data$cohort), child.data$birthweight,
@@ -216,44 +219,44 @@ summary(LS.model)</code></pre>
 ## lm(formula = birthweight ~ gestational.age + gender, data = child.data)
 ## 
 ## Residuals:
-##      Min       1Q   Median       3Q      Max 
-## -192.251  -38.973    1.343   40.249  218.080 
+##     Min      1Q  Median      3Q     Max 
+## -192.25  -38.97    1.34   40.25  218.08 
 ## 
 ## Coefficients:
 ##                 Estimate Std. Error t value Pr(&gt;|t|)    
-## (Intercept)     -714.682     43.966 -16.255  &lt; 2e-16 ***
-## gestational.age   68.156      1.464  46.569  &lt; 2e-16 ***
-## genderM          -12.735      1.928  -6.604 4.51e-11 ***
+## (Intercept)      -714.68      43.97   -16.3  &lt; 2e-16 ***
+## gestational.age    68.16       1.46    46.6  &lt; 2e-16 ***
+## genderM           -12.73       1.93    -6.6  4.5e-11 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 60.09 on 4056 degrees of freedom
-## Multiple R-squared:  0.357,  Adjusted R-squared:  0.3566 
-## F-statistic:  1126 on 2 and 4056 DF,  p-value: &lt; 2.2e-16</code></pre>
+## Residual standard error: 60.1 on 4056 degrees of freedom
+## Multiple R-squared:  0.357,  Adjusted R-squared:  0.357 
+## F-statistic: 1.13e+03 on 2 and 4056 DF,  p-value: &lt;2e-16</code></pre>
 <pre class="r"><code>#Normal linear regression model with cohort specific variable
-LS.model1 &lt;- lm(birthweight ~ gestational.age + gender + cohortvar, data = child.data)
+LS.model1 &lt;- lm(birthweight ~ gestational.age + gender + homebirth, data = child.data)
 summary(LS.model1)</code></pre>
 <pre><code>## 
 ## Call:
-## lm(formula = birthweight ~ gestational.age + gender + cohortvar, 
+## lm(formula = birthweight ~ gestational.age + gender + homebirth, 
 ##     data = child.data)
 ## 
 ## Residuals:
-##      Min       1Q   Median       3Q      Max 
-## -203.090  -38.104    1.272   40.932  208.864 
+##     Min      1Q  Median      3Q     Max 
+## -203.34  -38.09    1.23   41.01  208.87 
 ## 
 ## Coefficients:
-##                 Estimate Std. Error t value Pr(&gt;|t|)    
-## (Intercept)     -637.960     44.907 -14.206  &lt; 2e-16 ***
-## gestational.age   65.591      1.495  43.867  &lt; 2e-16 ***
-## genderM          -12.294      1.917  -6.414 1.58e-10 ***
-## cohortvar         31.057      4.220   7.360 2.21e-13 ***
+##                  Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)     -663.0199    44.2425  -14.99  &lt; 2e-16 ***
+## gestational.age   65.5935     1.4952   43.87  &lt; 2e-16 ***
+## genderM          -12.2867     1.9167   -6.41  1.6e-10 ***
+## homebirth          0.6234     0.0848    7.35  2.3e-13 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## Residual standard error: 59.7 on 4055 degrees of freedom
-## Multiple R-squared:  0.3654, Adjusted R-squared:  0.365 
-## F-statistic: 778.4 on 3 and 4055 DF,  p-value: &lt; 2.2e-16</code></pre>
+## Multiple R-squared:  0.365,  Adjusted R-squared:  0.365 
+## F-statistic:  778 on 3 and 4055 DF,  p-value: &lt;2e-16</code></pre>
 <p>In both models all variables are statistically significant. Besides ignoring the multilevel structure, one commonly used method is to add a dummy variable for each cohort study. This means including 20 dummy variables.</p>
 <pre class="r"><code>#Normal linear regression model without cohort specific variable
 LS.model2 &lt;- lm(birthweight ~ gestational.age + gender + factor(cohort), data = child.data)
@@ -265,144 +268,144 @@ summary(LS.model2)</code></pre>
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -227.70  -37.96    2.14   39.80  194.29 
+## -227.70  -37.96    2.14   39.79  194.29 
 ## 
 ## Coefficients:
 ##                 Estimate Std. Error t value Pr(&gt;|t|)    
-## (Intercept)     -602.604     44.310 -13.600  &lt; 2e-16 ***
-## gestational.age   65.461      1.461  44.793  &lt; 2e-16 ***
-## genderM          -14.215      1.943  -7.316 3.07e-13 ***
-## factor(cohort)B   -3.830      6.024  -0.636    0.525    
-## factor(cohort)C  -29.035      4.931  -5.888 4.22e-09 ***
-## factor(cohort)D  -43.346      5.644  -7.679 1.99e-14 ***
-## factor(cohort)E  -40.130      5.779  -6.945 4.41e-12 ***
-## factor(cohort)F  -52.200      5.220 -10.000  &lt; 2e-16 ***
-## factor(cohort)G  -29.058      6.149  -4.725 2.37e-06 ***
-## factor(cohort)H  -42.174      5.277  -7.993 1.71e-15 ***
-## factor(cohort)I  -33.490      6.172  -5.426 6.09e-08 ***
-## factor(cohort)J  -34.756      5.076  -6.847 8.67e-12 ***
-## factor(cohort)K  -32.099      5.081  -6.317 2.95e-10 ***
-## factor(cohort)L  -31.373      5.355  -5.859 5.04e-09 ***
-## factor(cohort)M  -45.051      5.665  -7.953 2.35e-15 ***
-## factor(cohort)N  -33.049      5.854  -5.645 1.76e-08 ***
-## factor(cohort)O  -44.210      6.509  -6.792 1.27e-11 ***
-## factor(cohort)P   10.926      6.807   1.605    0.109    
-## factor(cohort)Q    2.744      6.873   0.399    0.690    
-## factor(cohort)R  -30.721      6.271  -4.899 1.00e-06 ***
-## factor(cohort)S  -34.692      6.175  -5.618 2.06e-08 ***
-## factor(cohort)T  -27.148      5.230  -5.191 2.19e-07 ***
+## (Intercept)      -602.60      44.31  -13.60  &lt; 2e-16 ***
+## gestational.age    65.46       1.46   44.79  &lt; 2e-16 ***
+## genderM           -14.22       1.94   -7.32  3.1e-13 ***
+## factor(cohort)B    -3.83       6.02   -0.64     0.52    
+## factor(cohort)C   -29.03       4.93   -5.89  4.2e-09 ***
+## factor(cohort)D   -43.35       5.64   -7.68  2.0e-14 ***
+## factor(cohort)E   -40.13       5.78   -6.94  4.4e-12 ***
+## factor(cohort)F   -52.20       5.22  -10.00  &lt; 2e-16 ***
+## factor(cohort)G   -29.06       6.15   -4.73  2.4e-06 ***
+## factor(cohort)H   -42.17       5.28   -7.99  1.7e-15 ***
+## factor(cohort)I   -33.49       6.17   -5.43  6.1e-08 ***
+## factor(cohort)J   -34.76       5.08   -6.85  8.7e-12 ***
+## factor(cohort)K   -32.10       5.08   -6.32  2.9e-10 ***
+## factor(cohort)L   -31.37       5.35   -5.86  5.0e-09 ***
+## factor(cohort)M   -45.05       5.66   -7.95  2.3e-15 ***
+## factor(cohort)N   -33.05       5.85   -5.65  1.8e-08 ***
+## factor(cohort)O   -44.21       6.51   -6.79  1.3e-11 ***
+## factor(cohort)P    10.93       6.81    1.61     0.11    
+## factor(cohort)Q     2.74       6.87    0.40     0.69    
+## factor(cohort)R   -30.72       6.27   -4.90  1.0e-06 ***
+## factor(cohort)S   -34.69       6.18   -5.62  2.1e-08 ***
+## factor(cohort)T   -27.15       5.23   -5.19  2.2e-07 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 58.33 on 4037 degrees of freedom
-## Multiple R-squared:  0.3969, Adjusted R-squared:  0.3938 
-## F-statistic: 126.5 on 21 and 4037 DF,  p-value: &lt; 2.2e-16</code></pre>
+## Residual standard error: 58.3 on 4037 degrees of freedom
+## Multiple R-squared:  0.397,  Adjusted R-squared:  0.394 
+## F-statistic:  127 on 21 and 4037 DF,  p-value: &lt;2e-16</code></pre>
 <pre class="r"><code>#Normal linear regression model with cohort specific variable
-LS.model3 &lt;- lm(birthweight ~ gestational.age + gender + cohortvar + factor(cohort), data = child.data)
+LS.model3 &lt;- lm(birthweight ~ gestational.age + gender + homebirth + factor(cohort), data = child.data)
 summary(LS.model3)</code></pre>
 <pre><code>## 
 ## Call:
-## lm(formula = birthweight ~ gestational.age + gender + cohortvar + 
+## lm(formula = birthweight ~ gestational.age + gender + homebirth + 
 ##     factor(cohort), data = child.data)
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -227.70  -37.96    2.14   39.80  194.29 
+## -227.70  -37.96    2.14   39.79  194.29 
 ## 
 ## Coefficients: (1 not defined because of singularities)
-##                  Estimate Std. Error t value Pr(&gt;|t|)    
-## (Intercept)     -641.8757    44.2610 -14.502  &lt; 2e-16 ***
-## gestational.age   65.4608     1.4614  44.793  &lt; 2e-16 ***
-## genderM          -14.2153     1.9431  -7.316 3.07e-13 ***
-## cohortvar        140.5824    27.0809   5.191 2.19e-07 ***
-## factor(cohort)B  -17.9728     7.6645  -2.345 0.019079 *  
-## factor(cohort)C   -0.1146     4.9462  -0.023 0.981515    
-## factor(cohort)D  -24.2790     4.9989  -4.857 1.24e-06 ***
-## factor(cohort)E  -42.7417     6.0359  -7.081 1.68e-12 ***
-## factor(cohort)F  -23.7140     5.1967  -4.563 5.19e-06 ***
-## factor(cohort)G  -33.9633     6.6281  -5.124 3.13e-07 ***
-## factor(cohort)H   15.9420     9.5382   1.671 0.094723 .  
-## factor(cohort)I   97.0177    23.0110   4.216 2.54e-05 ***
-## factor(cohort)J   44.4751    13.1856   3.373 0.000751 ***
-## factor(cohort)K   32.6205    10.5748   3.085 0.002051 ** 
-## factor(cohort)L    7.9991     6.6408   1.205 0.228452    
-## factor(cohort)M   18.0304    10.5858   1.703 0.088597 .  
-## factor(cohort)N   12.7668     7.9520   1.605 0.108466    
-## factor(cohort)O   20.4320    11.3186   1.805 0.071124 .  
-## factor(cohort)P   12.4853     6.6902   1.866 0.062083 .  
-## factor(cohort)Q    6.6784     6.6047   1.011 0.312001    
-## factor(cohort)R   17.4377     8.5889   2.030 0.042396 *  
-## factor(cohort)S   26.3376    10.5382   2.499 0.012485 *  
-## factor(cohort)T        NA         NA      NA       NA    
+##                 Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)     -749.206     50.310  -14.89  &lt; 2e-16 ***
+## gestational.age   65.461      1.461   44.79  &lt; 2e-16 ***
+## genderM          -14.215      1.943   -7.32  3.1e-13 ***
+## homebirth          2.715      0.523    5.19  2.2e-07 ***
+## factor(cohort)B  -17.404      7.587   -2.29   0.0218 *  
+## factor(cohort)C   -1.886      4.761   -0.40   0.6920    
+## factor(cohort)D  -24.342      4.997   -4.87  1.1e-06 ***
+## factor(cohort)E  -42.845      6.047   -7.09  1.6e-12 ***
+## factor(cohort)F  -25.052      5.066   -4.94  7.9e-07 ***
+## factor(cohort)G  -34.487      6.685   -5.16  2.6e-07 ***
+## factor(cohort)H   14.838      9.351    1.59   0.1126    
+## factor(cohort)I   91.393     21.961    4.16  3.2e-05 ***
+## factor(cohort)J   41.260     12.601    3.27   0.0011 ** 
+## factor(cohort)K   30.343     10.174    2.98   0.0029 ** 
+## factor(cohort)L    6.635      6.453    1.03   0.3039    
+## factor(cohort)M   14.676     10.019    1.46   0.1430    
+## factor(cohort)N   10.389      7.609    1.37   0.1722    
+## factor(cohort)O   18.232     10.959    1.66   0.0963 .  
+## factor(cohort)P   13.640      6.611    2.06   0.0392 *  
+## factor(cohort)Q    5.459      6.680    0.82   0.4138    
+## factor(cohort)R   15.431      8.300    1.86   0.0631 .  
+## factor(cohort)S   25.034     10.325    2.42   0.0154 *  
+## factor(cohort)T       NA         NA      NA       NA    
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 58.33 on 4037 degrees of freedom
-## Multiple R-squared:  0.3969, Adjusted R-squared:  0.3938 
-## F-statistic: 126.5 on 21 and 4037 DF,  p-value: &lt; 2.2e-16</code></pre>
+## Residual standard error: 58.3 on 4037 degrees of freedom
+## Multiple R-squared:  0.397,  Adjusted R-squared:  0.394 
+## F-statistic:  127 on 21 and 4037 DF,  p-value: &lt;2e-16</code></pre>
 <p>When adding dummy variables for each cohort (without the cohort specific variable), we can see that almost all dummy variables are statistically significant. However, when the cohort specific variable is added to the model, we can see that a lot of dummy variables are not statistically significant anymore. This is because the cohort specific variable already explains some of the variability between the cohort studies. Moreover, for one of the dummy variables the estimate is non-available (NA). This is due because the variable is linearly related to another one.</p>
 <p>When using the model structure where the cohort studies are represented by dummy variables, one assumes that the observations are still independent of each other. However, children from one cohort study might be more similar than to a randomly choosing other child from one of the other cohort studies. Or to put it more simple, a child from two parents is probably more similar to another child from the same parents (brother or sister) then a randomly chosen other child. Thus, adding dummy variables for each cohort study does not take this correlation into account. This could potentially lead to wrongly calculated standard errors (too low) leading to overstatement of the statistical significance.</p>
 <p>One way to take this correlation structure into account is by means of a mixed effects model. We will in this workshop only look at the random intercepts model, since the workshop tries to explain why some methods might be needed for RECAP and not go into full detail of these methods. With the random intercepts model each cohort study has its own intercept consisting of a fixed part (which is similar for each cohort study) and a random part. This random part is different for each cohort study, however will on average be equal to zero. Running the following chunk of code will estimate a random intercepts model:</p>
-<pre class="r"><code>randint.model &lt;- lmer(birthweight ~ gestational.age + gender + cohortvar + (1|cohort), data=child.data)
+<pre class="r"><code>randint.model &lt;- lmer(birthweight ~ gestational.age + gender + homebirth + (1|cohort), data=child.data)
 summary(randint.model)</code></pre>
 <pre><code>## Linear mixed model fit by REML ['lmerMod']
-## Formula: birthweight ~ gestational.age + gender + cohortvar + (1 | cohort)
+## Formula: birthweight ~ gestational.age + gender + homebirth + (1 | cohort)
 ##    Data: child.data
 ## 
-## REML criterion at convergence: 44558.2
+## REML criterion at convergence: 44566
 ## 
 ## Scaled residuals: 
-##     Min      1Q  Median      3Q     Max 
-## -3.8503 -0.6507  0.0340  0.6879  3.3347 
+##    Min     1Q Median     3Q    Max 
+## -3.851 -0.651  0.034  0.688  3.335 
 ## 
 ## Random effects:
 ##  Groups   Name        Variance Std.Dev.
-##  cohort   (Intercept)  209.6   14.48   
-##  Residual             3402.9   58.33   
+##  cohort   (Intercept)  210     14.5    
+##  Residual             3403     58.3    
 ## Number of obs: 4059, groups:  cohort, 20
 ## 
 ## Fixed effects:
 ##                 Estimate Std. Error t value
-## (Intercept)     -632.326     44.016  -14.37
-## gestational.age   65.471      1.461   44.80
-## genderM          -14.081      1.938   -7.27
-## cohortvar         34.461     13.768    2.50
+## (Intercept)     -660.056     44.685   -14.8
+## gestational.age   65.472      1.461    44.8
+## genderM          -14.081      1.938    -7.3
+## homebirth          0.692      0.277     2.5
 ## 
 ## Correlation of Fixed Effects:
 ##             (Intr) gsttn. gendrM
-## gestatinl.g -0.997              
-## genderM     -0.064  0.046       
-## cohortvar    0.065 -0.070  0.011</code></pre>
+## gestatinl.g -0.965              
+## genderM     -0.066  0.046       
+## homebirth   -0.184 -0.070  0.011</code></pre>
 <p>Note, that all the coefficient estimates are significant (|t-value| &gt; 2). Moreover, the coefficient estimate for the cohort specific variable is now much smaller than in the model with dummy variables for each cohort study (140.5824). Thus, in the model with a random intercept the variation between the cohort studies is explained by the random intercepts instead of this variable.</p>
 <p>To get the random parts of the intercept for each of the cohort studies we can run the following chunk of code:</p>
 <pre class="r"><code>ranef(randint.model)</code></pre>
 <pre><code>## $cohort
-##     (Intercept)
-## A  18.436883525
-## B  11.288778859
-## C  -2.124173474
-## D -17.506788547
-## E -19.323063862
-## F -24.050416224
-## G  -9.484603947
-## H  -7.718009380
-## I  16.420715835
-## J   4.187148547
-## K   3.289564164
-## L  -1.876688663
-## M  -9.132856423
-## N  -1.908950964
-## O  -7.642849893
-## P  26.918348909
-## Q  20.269032910
-## R   0.693051101
-## S   0.006573518
-## T  -0.741695985</code></pre>
+##   (Intercept)
+## A      18.438
+## B      11.298
+## C      -2.289
+## D     -17.353
+## E     -19.372
+## F     -24.114
+## G      -9.648
+## H      -7.456
+## I      16.265
+## J       4.135
+## K       3.331
+## L      -1.847
+## M      -9.361
+## N      -2.059
+## O      -7.588
+## P      27.190
+## Q      20.036
+## R       0.651
+## S       0.238
+## T      -0.495</code></pre>
 <p>We can also calculate the ICC. Remember the rule of thumb: if the ICC &gt; 5% it is advised to use a mixed effects model.</p>
 <pre class="r"><code>varcor &lt;- as.data.frame(VarCorr(randint.model))
 ICC &lt;- varcor[1,4]/(varcor[1,4] + varcor[2,4])
 ICC</code></pre>
-<pre><code>## [1] 0.05802337</code></pre>
+<pre><code>## [1] 0.0581</code></pre>
 <p>Hence, for this study it was a good choice to use a mixed effects model.</p>
 
 

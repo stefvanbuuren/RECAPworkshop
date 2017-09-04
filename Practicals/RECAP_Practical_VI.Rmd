@@ -14,13 +14,13 @@ library(mlmRev)
 
 The dataset is called `Exam`, and contains simulated data about examresults of children. However, since it is simulated data with an multilevel structure, we can rename the variables to something more related to RECAP. Which is what we will do, to show how such a multilevel structure works. In this case we assume that each cohort study collected the same variables (in the same units), there are no missings and the cohort studies started at the same time. Note, that this situation will practically never happen. However, to keep things simple in order to explain the multilevel analysis we will assume it holds.
 
-In this example we want to explain birthweight by gestational age, gender and a cohort specific variable **WHICH VAR??** to keep things simple. Moreover, for each child we know to which cohort study it belongs.
+In this example we want to explain birthweight by gestational age, gender and a cohort specific variable homebirth (the number of home births per 100 childbirths) to keep things simple. Moreover, for each child we know to which cohort study it belongs.
 
 To get the data from the package `mlmRev` run the following code chunk
 ```{r}
 data(Exam) #get the data
 child.data <- Exam[, c(1, 2, 4, 7, 8, 10)] #keep only a few variables
-names(child.data) <- c("cohort", "birthweightnorm", "cohortvar", "gestational.agenorm", "gender", "child") #rename the variables
+names(child.data) <- c("cohort", "birthweightnorm", "homebirth", "gestational.agenorm", "gender", "child") #rename the variables
 head(child.data)
 ```
 
@@ -68,7 +68,7 @@ child.data[child.data$cohort %in% c('38', '50', '51', '65'), 1] <- 'T'
 child.data$cohort <- sort(child.data$cohort, decreasing=FALSE)
 ```
 
-Since we combined different cohort studies, we should redefine the cohort specific variable **WHAT VAR??** which should have the same value for each child in the same cohort. For the new (combined) cohorts we will take the average value of the cohort specific variable of the cohorts that were combined.
+Since we combined different cohort studies, we should redefine the cohort specific variable homebirth which should have the same value for each child in the same cohort. For the new (combined) cohorts we will take the average value of the cohort specific variable of the cohorts that were combined.
 ```{r}
 #Make one cohort variable
 child.data[child.data$cohort == 'A', 2] <- mean(child.data[child.data$cohort == 'A', 2])
@@ -91,6 +91,9 @@ child.data[child.data$cohort == 'Q', 2] <- mean(child.data[child.data$cohort == 
 child.data[child.data$cohort == 'R', 2] <- mean(child.data[child.data$cohort == 'R', 2])
 child.data[child.data$cohort == 'S', 2] <- mean(child.data[child.data$cohort == 'S', 2])
 child.data[child.data$cohort == 'T', 2] <- mean(child.data[child.data$cohort == 'T', 2])
+
+child.data$homebirth <- ((child.data$homebirth+0.8)/2)*100
+child.data$homebirth <- round(child.data$homebirth, digits=0)
 ```
 
 Now, the data is ready to be used for multilevel modelling. Note that the multilevel structure is as follows: level 1 contains the childeren and level 2 contains the cohort studies.
@@ -111,7 +114,7 @@ LS.model <- lm(birthweight ~ gestational.age + gender, data = child.data)
 summary(LS.model)
 
 #Normal linear regression model with cohort specific variable
-LS.model1 <- lm(birthweight ~ gestational.age + gender + cohortvar, data = child.data)
+LS.model1 <- lm(birthweight ~ gestational.age + gender + homebirth, data = child.data)
 summary(LS.model1)
 ```
 
@@ -122,7 +125,7 @@ LS.model2 <- lm(birthweight ~ gestational.age + gender + factor(cohort), data = 
 summary(LS.model2)
 
 #Normal linear regression model with cohort specific variable
-LS.model3 <- lm(birthweight ~ gestational.age + gender + cohortvar + factor(cohort), data = child.data)
+LS.model3 <- lm(birthweight ~ gestational.age + gender + homebirth + factor(cohort), data = child.data)
 summary(LS.model3)
 ```
 
@@ -132,7 +135,7 @@ When using the model structure where the cohort studies are represented by dummy
 
 One way to take this correlation structure into account is by means of a mixed effects model. We will in this workshop only look at the random intercepts model, since the workshop tries to explain why some methods might be needed for RECAP and not go into full detail of these methods. With the random intercepts model each cohort study has its own intercept consisting of a fixed part (which is similar for each cohort study) and a random part. This random part is different for each cohort study, however will on average be equal to zero. Running the following chunk of code will estimate a random intercepts model:
 ```{r}
-randint.model <- lmer(birthweight ~ gestational.age + gender + cohortvar + (1|cohort), data=child.data)
+randint.model <- lmer(birthweight ~ gestational.age + gender + homebirth + (1|cohort), data=child.data)
 summary(randint.model)
 ```
 Note, that all the coefficient estimates are significant (|t-value| > 2). Moreover, the coefficient estimate for the cohort specific variable is now much smaller than in the model with dummy variables for each cohort study (140.5824). Thus, in the model with a random intercept the variation between the cohort studies is explained by the random intercepts instead of this variable.
