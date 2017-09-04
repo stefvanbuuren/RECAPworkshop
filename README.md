@@ -10,14 +10,14 @@ This site contains materials for the RECAP workshop *Statistical Methods for com
 Motivation
 ----------
 
-Combining data sets generated blocks of missing data problem. However, most data analysis procedures are designed for complete data, and many will fail if the data contain missing values. Most procedures will therefore simply ignore any incomplete rows in the data, or use ad-hoc procedures like replacing missing values with some sort of "best value". However, such fixes are based on assumptions, and may introduce biases when these assumptions are not met.
+Combining data sets generates blocks of missing data. However, most data analysis procedures are designed for complete data, and many will fail if the data contain missing values. Most procedures will therefore simply ignore any incomplete rows in the data, or revert to ad-hoc procedures like replacing missing values with some sort of "best value". However, such fixes are based on assumptions, and may introduce serious biases when these assumptions are not met.
 
-This workshop revises practical issues with combining data, and explores the use of multiple imputation and the Rasch model are principled solutions. The workshop is set up as a combination lectures and practical exercises to apply the techniques in practice using `R`.
+This workshop revises practical issues with combining data, and explores the use of multiple imputation as a principled solution.
 
 Contents
 --------
 
-The workshop will consist of 6 sessions, each of which comprises a lecture followed by a computer practical using `R`:
+The workshop consist of 6 sessions, each of which comprises a lecture followed by a computer practical using `R`:
 
 1.  Session I: Combining Datasets & Missing Data
 2.  Session II: Multiple imputation using `mice`
